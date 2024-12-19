@@ -12,7 +12,7 @@ Required stuff `PulseAudio` or `Alsa`, `make`, `clang` or `gcc`.
 
 Edit `config.h` if necessary.
 
-Simply run `make` in the Jirilo PTT's folder and then copy `ptt` to your `/usr/bin/` dir or somewhere else.
+Simply run `make` in the Jirilo PTT's folder and then copy `ptt` to your `/usr/bin/` dir or somewhere else. If you want to build in debug mode with all the debug messages, run `make DEBUG=1`.
 
 Run `ptt` or set it to be executed on system startup. For example, in Hyprland, you can do it by using `exec-once ptt`.
 

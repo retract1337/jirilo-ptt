@@ -19,7 +19,7 @@ struct BackendCommands {
 };
 
 void detect_backend(struct BackendCommands *backend);
-void set_state(int state, const struct BackendCommands *backend);
+void set_state(int state, int *global_state, const struct BackendCommands *backend);
 void get_status(const struct BackendCommands *backend);
 
 #endif // CONFIG_H

@@ -25,19 +25,13 @@ static struct timespec current_time;
 static struct timespec last_signal_time;
 
 static void on_handler(void) {
-    set_state(MIC_ON, &backend);
-    mic_state = MIC_ON;
-
+    set_state(MIC_ON, &mic_state, &backend);
     clock_gettime(CLOCK_MONOTONIC, &last_signal_time);
-    LOG_INFO("[%s] MIC turned ON", NAME);
 }
 
 static void off_handler(void) {
-    set_state(MIC_OFF, &backend);
-    mic_state = MIC_OFF;
-
+    set_state(MIC_OFF, &mic_state, &backend);
     clock_gettime(CLOCK_MONOTONIC, &last_signal_time); 
-    LOG_INFO("[%s] MIC turned OFF", NAME);
 }
 
 static void status_handler(void) {
@@ -50,12 +44,11 @@ static void ptt_handler(void) {
         return;
     }
 
-    ptt_pressed = 1;
+    ptt_pressed = PTT_PRESSED;
     clock_gettime(CLOCK_MONOTONIC, &last_signal_time);
 
     if (mic_state == MIC_ON) {
-        set_state(MIC_OFF, &backend);
-        mic_state = MIC_OFF;
+        set_state(MIC_OFF, &mic_state, &backend);
     }
 
     LOG_INFO("[%s] PTT pressed", NAME);
@@ -70,14 +63,8 @@ void timeout_handler(int timeout) {
 
     if (elapsed_ms >= timeout && mic_state) {
         LOG_INFO("[%s] No signal detected for %d ms, disabling microphone...\n", NAME, timeout);
-
-        set_state(MIC_OFF, &backend);
-        mic_state = MIC_OFF;
+        set_state(MIC_OFF, &mic_state, &backend);
     }
-}
-
-static void exit_handler(void) {
-    exit(0);
 }
 
 static CommandMap command_map[] = {
@@ -85,7 +72,6 @@ static CommandMap command_map[] = {
     { "0", off_handler },
     { "status", status_handler },
     { "ptt", ptt_handler },
-    { "exit", exit_handler },
     { NULL, NULL }
 };
 
@@ -112,7 +98,7 @@ static void process_command(const char *input) {
 }
 
 void cleanup() {
-    set_state(MIC_OFF, &backend);
+    set_state(MIC_OFF, &mic_state, &backend);
     unlink(FIFO_PATH);
     LOG_INFO("[%s] Cleanup performed", NAME);
 }
@@ -124,10 +110,11 @@ int main(int argc, char *argv[]) {
     int custom_timeout = SIGNAL_TIMEOUT;
 
     atexit(cleanup); 
-    unlink(FIFO_PATH);  
+    unlink(FIFO_PATH); 
+
     detect_backend(&backend);
 
-    while ((opt = getopt(argc, argv, "t:")) != -1) {
+    while ((opt = getopt(argc, argv, "t:i:")) != -1) {
         switch (opt) {
             case 't':
                 custom_timeout = atoi(optarg);

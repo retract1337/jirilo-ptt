@@ -23,16 +23,23 @@ void detect_backend(struct BackendCommands *backend) {
     }
 }
 
-void set_state(int state, const struct BackendCommands *backend) {
+void set_state(int state, int *global_state, const struct BackendCommands *backend) {
+    if (state == *global_state) {
+        LOG_INFO("[%s] Microphone is already %s", NAME, state == MIC_ON ? "enabled" : "disabled");
+        return;
+    }
+
     if (state) {
         if (system(backend->enable) == 0) {
             LOG_INFO("[%s] Microphone enabled", NAME);
+            *global_state = MIC_ON;
         } else {
             LOG_ERROR("[%s] Failed to enable microphone", NAME);
         }
     } else {
         if (system(backend->disable) == 0) {
             LOG_INFO("[%s] Microphone disabled", NAME);
+            *global_state = MIC_OFF;
         } else {
             LOG_ERROR("[%s] Failed to disable microphone", NAME);
         }
@@ -48,4 +55,5 @@ void get_status(const struct BackendCommands *backend) {
     } else {
         LOG_INFO("[%s] Microphone is currently disabled", NAME);
     }
+
 }
