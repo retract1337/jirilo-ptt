@@ -20,6 +20,6 @@ Then, bind a button to spam echo `"1" > /tmp/jirilo_ptt` into ptt's FIFO.
 
 ### 🔧 Modes
 1 - Unmutes your micro,
-2 - Mutes your micro,
-3 - Disables ptt,
+0 - Mutes your micro,
+ptt - Disables ptt,
 status - Prints status.
