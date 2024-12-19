@@ -55,5 +55,4 @@ void get_status(const struct BackendCommands *backend) {
     } else {
         LOG_INFO("[%s] Microphone is currently disabled", NAME);
     }
-
 }

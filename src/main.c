@@ -1,11 +1,11 @@
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <time.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <time.h>
+#include <unistd.h>
 
 #include "include/config.h"
 #include "include/logger.h"
@@ -31,7 +31,7 @@ static void on_handler(void) {
 
 static void off_handler(void) {
     set_state(MIC_OFF, &mic_state, &backend);
-    clock_gettime(CLOCK_MONOTONIC, &last_signal_time); 
+    clock_gettime(CLOCK_MONOTONIC, &last_signal_time);
 }
 
 static void status_handler(void) {
@@ -68,15 +68,14 @@ void timeout_handler(int timeout) {
 }
 
 static CommandMap command_map[] = {
-    { "1", on_handler },
-    { "0", off_handler },
-    { "status", status_handler },
-    { "ptt", ptt_handler },
-    { NULL, NULL }
-};
+        {"1", on_handler},
+        {"0", off_handler},
+        {"status", status_handler},
+        {"ptt", ptt_handler},
+        {NULL, NULL}};
 
 static void process_command(const char *input) {
-    char *token = (char *)input; 
+    char *token = (char *) input;
     char *strtok_result = strtok(token, "\n");
 
     while (strtok_result != NULL) {
@@ -109,8 +108,8 @@ int main(int argc, char *argv[]) {
     int custom_check_interval = DEFAULT_CHECK_INTERVAL;
     int custom_timeout = SIGNAL_TIMEOUT;
 
-    atexit(cleanup); 
-    unlink(FIFO_PATH); 
+    atexit(cleanup);
+    unlink(FIFO_PATH);
 
     detect_backend(&backend);
 
@@ -143,7 +142,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    char buffer[1024]; 
+    char buffer[1024];
 
     while (1) {
         ssize_t bytes_read = read(fd, buffer, sizeof(buffer) - 1);
@@ -162,4 +161,3 @@ int main(int argc, char *argv[]) {
 
     return EXIT_SUCCESS;
 }
-
