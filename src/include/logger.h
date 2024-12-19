@@ -15,4 +15,4 @@
 #define LOG_DEBUG(format, ...) (void) 0
 #endif
 
-#endif// LOGGER_H
+#endif// LOG

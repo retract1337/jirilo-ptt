@@ -53,3 +53,7 @@ dkms.conf
 
 *.git/
 *.idea/
+
+ptt
+test
+test.c

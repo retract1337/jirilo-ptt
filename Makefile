@@ -1,3 +1,4 @@
+
 CC = clang
 TARGET = ptt
 SRC_DIR = src
@@ -8,10 +9,10 @@ HEADERS = $(wildcard $(INC_DIR)/*.h)
 
 CFLAGS = -Wall -Wextra -I$(INC_DIR)
 
-DEBUG_FLAGS = -g -O0
+DEBUG_FLAGS = -g -O0 -DDEBUG
 RELEASE_FLAGS = -O3 -DNDEBUG
 
-DEBUG ?= 0
+DEBUG ?= 1
 ifeq ($(DEBUG), 1)
     CFLAGS += $(DEBUG_FLAGS)
 else

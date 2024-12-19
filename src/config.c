@@ -1,17 +1,18 @@
 #include "include/config.h"
 #include "include/logger.h"
+#include "include/utils.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 
 void detect_backend(struct BackendCommands *backend) {
-    if (system("which amixer > /dev/null 2>&1") == 0) {
+    if (command_exists("amixer")) {
         backend->enable = "amixer set Capture cap > /dev/null 2>&1";
         backend->disable = "amixer set Capture nocap > /dev/null 2>&1";
         backend->status = "amixer get Capture";
 
         LOG_INFO("[%s] Using ALSA backend", NAME);
-    } else if (system("which pactl > /dev/null 2>&1") == 0) {
+    } else if (command_exists("pactl")) {
         backend->enable = "pactl set-source-mute @DEFAULT_SOURCE@ 0";
         backend->disable = "pactl set-source-mute @DEFAULT_SOURCE@ 1";
         backend->status = "pactl list sources";
@@ -21,7 +22,7 @@ void detect_backend(struct BackendCommands *backend) {
         LOG_ERROR("[%s] No supported audio backend detected", NAME);
         exit(1);
     }
-}
+} 
 
 void set_state(int state, int *global_state, const struct BackendCommands *backend) {
     if (state == *global_state) {

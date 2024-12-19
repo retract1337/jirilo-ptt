@@ -18,6 +18,8 @@ Run `ptt` or set it to be executed on system startup. For example, in Hyprland, 
 
 Then, bind a button to spam echo `"1" > /tmp/jirilo_ptt` into ptt's FIFO.
 
+Also you can specify a command to execute on timeout. For example, you can use `notify-send "Microphone disabled"` to get a notification when microphone is disabled.
+
 ### 🔧 Modes
 1 - Unmutes your micro,
 0 - Mutes your micro,

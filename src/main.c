@@ -1,4 +1,5 @@
 #include <fcntl.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -8,50 +9,43 @@
 #include <unistd.h>
 
 #include "include/config.h"
+#include "include/handlers.h"
 #include "include/logger.h"
+#include "include/utils.h"
 
-typedef void (*CommandHandler)(void);
+typedef void (*CommandHandler)(int, int *, struct BackendCommands *);
 
 typedef struct {
     const char *command;
     CommandHandler handler;
+    int param;
 } CommandMap;
 
 static struct BackendCommands backend;
 static int mic_state = MIC_OFF;
-static int ptt_pressed = PTT_RELEASED;
-
+static char *callback[512] = {0};
 static struct timespec current_time;
-static struct timespec last_signal_time;
 
-static void on_handler(void) {
-    set_state(MIC_ON, &mic_state, &backend);
-    clock_gettime(CLOCK_MONOTONIC, &last_signal_time);
+static CommandMap command_map[] = {
+        {"1", state_handler, MIC_ON},
+        {"0", state_handler, MIC_OFF},
+        {"status", (CommandHandler) status_handler, 0},
+        {"ptt", (CommandHandler) ptt_handler, 0},
+        {NULL, NULL, 0}};
+
+static void print_help() {
+    printf("Usage: %s [-t timeout] [-i interval] [-c command] [-h]\n", NAME);
+    printf("\t-t timeout\t Timeout in ms for detecting signal\n");
+    printf("\t-i interval\t Check interval in ms\n");
+    printf("\t-c command\t Command to execute on timeout\n");
+    printf("\t-h\t\t Print this help\n");
 }
 
-static void off_handler(void) {
-    set_state(MIC_OFF, &mic_state, &backend);
-    clock_gettime(CLOCK_MONOTONIC, &last_signal_time);
-}
+static void signal_handler(int signal) {
+    LOG_INFO("[%s] Received signal %d, cleaning up...", NAME, signal);
 
-static void status_handler(void) {
-    get_status(&backend);
-    LOG_INFO("[%s] Status requested", NAME);
-}
-
-static void ptt_handler(void) {
-    if (ptt_pressed == PTT_RELEASED) {
-        return;
-    }
-
-    ptt_pressed = PTT_PRESSED;
-    clock_gettime(CLOCK_MONOTONIC, &last_signal_time);
-
-    if (mic_state == MIC_ON) {
-        set_state(MIC_OFF, &mic_state, &backend);
-    }
-
-    LOG_INFO("[%s] PTT pressed", NAME);
+    cleanup(&mic_state, &backend);
+    exit(EXIT_SUCCESS);
 }
 
 void timeout_handler(int timeout) {
@@ -64,18 +58,15 @@ void timeout_handler(int timeout) {
     if (elapsed_ms >= timeout && mic_state) {
         LOG_INFO("[%s] No signal detected for %d ms, disabling microphone...\n", NAME, timeout);
         set_state(MIC_OFF, &mic_state, &backend);
+
+        if (*callback != NULL) {
+            system(*callback);
+        }
     }
 }
 
-static CommandMap command_map[] = {
-        {"1", on_handler},
-        {"0", off_handler},
-        {"status", status_handler},
-        {"ptt", ptt_handler},
-        {NULL, NULL}};
-
 static void process_command(const char *input) {
-    char *token = (char *) input;
+    char *token = strdup(input);
     char *strtok_result = strtok(token, "\n");
 
     while (strtok_result != NULL) {
@@ -83,7 +74,7 @@ static void process_command(const char *input) {
 
         for (i = 0; command_map[i].command != NULL; i++) {
             if (strcmp(strtok_result, command_map[i].command) == 0) {
-                command_map[i].handler();
+                command_map[i].handler(command_map[i].param, &mic_state, &backend);
                 break;
             }
         }
@@ -94,12 +85,7 @@ static void process_command(const char *input) {
 
         strtok_result = strtok(NULL, "\n");
     }
-}
-
-void cleanup() {
-    set_state(MIC_OFF, &mic_state, &backend);
-    unlink(FIFO_PATH);
-    LOG_INFO("[%s] Cleanup performed", NAME);
+    free(token);
 }
 
 int main(int argc, char *argv[]) {
@@ -108,26 +94,41 @@ int main(int argc, char *argv[]) {
     int custom_check_interval = DEFAULT_CHECK_INTERVAL;
     int custom_timeout = SIGNAL_TIMEOUT;
 
-    atexit(cleanup);
     unlink(FIFO_PATH);
+    signal(SIGINT, signal_handler);
+    signal(SIGTERM, signal_handler);
 
-    detect_backend(&backend);
-
-    while ((opt = getopt(argc, argv, "t:i:")) != -1) {
+    while ((opt = getopt(argc, argv, "t:i:c:h")) != -1) {
         switch (opt) {
             case 't':
-                custom_timeout = atoi(optarg);
+                custom_timeout = strtol(optarg, NULL, 10);
+                if (custom_timeout == 0) {
+                    LOG_ERROR("[%s] Invalid timeout value: %s", NAME, optarg);
+                    print_help();
+                    exit(EXIT_FAILURE);
+                }
                 break;
             case 'i':
-                custom_check_interval = atoi(optarg);
+                custom_check_interval = strtol(optarg, NULL, 10);
+                if (custom_check_interval == 0) {
+                    LOG_ERROR("[%s] Invalid interval value: %s", NAME, optarg);
+                    print_help();
+                    exit(EXIT_FAILURE);
+                }
                 break;
+            case 'c':
+                callback[0] = strdup(optarg);
+                break;
+            case 'h':
+                print_help();
+                exit(EXIT_SUCCESS);
             default:
-                LOG_ERROR("[%s] Unknown option: %c", NAME, opt);
-                LOG_INFO("[%s] Usage: %s [-t timeout] [-i interval]", NAME, argv[0]);
-
+                print_help();
                 exit(EXIT_FAILURE);
         }
     }
+
+    detect_backend(&backend);
 
     if (mkfifo(FIFO_PATH, 0666) == -1) {
         perror("Failed to create FIFO");
@@ -161,3 +162,4 @@ int main(int argc, char *argv[]) {
 
     return EXIT_SUCCESS;
 }
+
